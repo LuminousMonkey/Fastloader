@@ -22,5 +22,5 @@ The blog post at
 everything in detail.
 
 # Author
-Mike Aldred <mike.aldred@luminousmonkey.org>
+Mike Aldred <mike.aldred@luminousmonkey.org> <br/>
 Michael Steil <mist64@mac.com> (original code)
