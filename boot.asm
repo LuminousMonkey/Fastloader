@@ -22,7 +22,6 @@ main:
   lda #memory_execute_end - memory_execute
   jsr $fdf9                     // Filename
   jsr $f34a                     // Open
-
   sei
   lda #VIC_OUT | DATA_OUT // CLK=0 DATA=1
   sta PORTA_SERIAL              // We're not ready to receive.
@@ -56,15 +55,12 @@ wait_raster_end:
   pla                           // 3 cycles
   bit $00                       // 3 cycles
   lda PORTA_SERIAL              // Get 2 bits into bits 6&7
-  lsr
-  lsr                           // Move down by 2 bits. (bits 4&5)
-  eor PORTA_SERIAL              // Get 2 more bits
-  lsr
-  lsr                           // Move everything down (bits 2-5)
-  eor PORTA_SERIAL              // Get 2 more bits
-  lsr
-  lsr                           // Move everything down (bits 0-5)
-  eor PORTA_SERIAL              // Get last 2 bits, now 0-7 are populated.
+  // Shift and load the other bits into the accumulator.
+  .for(var index = 0; index < 3; index++) {
+    lsr
+    lsr
+    eor PORTA_SERIAL
+  }
 
   ldx #VIC_OUT | DATA_OUT       // CLK=0 DATA=1
   stx PORTA_SERIAL              // Not ready any more, don't start sending.
@@ -103,26 +99,26 @@ c64_code_end:
 #import "1541-memory-locations.asm"
 // After reading the sector, the contents can be found at $0400 in the buffer.
 // This means, the 1541 code can be executed from this buffer.
-.pseudopc c64_code_end - main + 4 + C1541_BUFFER2 {
+.pseudopc c64_code_end - main + 4 + c1541.buffer2 {
 start1541:
-  lda #FLOPPY_CLOCK_OUT
-  sta C1541_PORTB               // Fast code is running!
+  lda #c1541.CLOCK_OUT
+  sta c1541.portB               // Fast code is running!
 
   lda #0                        // Sector
   sta sector_index
   sta $f9                       // Buffer $0300 for the read.
   lda #TRACK                    // The track we're going to start
                                 // loading from.
-  sta C1541_BUFFER1_TRACK_SEC_HI
+  sta c1541.buffer1TrackSecHi
 
 read_loop:
   lda sector_index
   lda sector_table,x
   inc sector_index
   bmi end
-  sta C1541_BUFFER1_TRACK_SEC_LO
+  sta c1541.buffer1TrackSecLo
   cli
-  jsr C1541_READ_BLOCK          // Read sector.
+  jsr c1541.readBlock           // Read sector.
   sei
 
 send_loop:
@@ -130,7 +126,7 @@ send_loop:
   // so it holds the correct buffer number "0" when we read the next
   // sector.
   lda $f9
-  lda C1541_BUFFER1,x
+  lda c1541.buffer1,x
 
   // First encode
   eor #3                        // Fix up for receiver side (VIC bank!)
@@ -142,29 +138,29 @@ send_loop:
   tax                           // to X
   ldy encode_table,x            // Super-encoded high nybble in Y
   lda #0
-  stx C1541_PORTB                // DATA=0, CLOCK=0 -> we're ready to send!
+  stx c1541.portB                // DATA=0, CLOCK=0 -> we're ready to send!
   pla
   and #$0f                      // Lower nybble
   tax
   lda encode_table,x            // Super-encoded low nybble in A.
 
 wait_for_c64:
-  ldx C1541_PORTB
+  ldx c1541.portB
   bne wait_for_c64              // Needs all 0
 
   // Then send.
-  sta C1541_PORTB
+  sta c1541.portB
   asl
   and #$0f
-  sta C1541_PORTB
+  sta c1541.portB
   tya
   nop
-  sta C1541_PORTB
+  sta c1541.portB
   asl
   and #$0f
-  sta C1541_PORTB
+  sta c1541.portB
 
-  jsr C1541_CLOCK_OUT_HI        // Clock=1 10 cycles later.
+  jsr c1541.clockOutHi          // Clock=1 10 cycles later.
 
   inc $f9
   bne send_loop

@@ -1,22 +1,23 @@
 #importonce
+.filenamespace c1541
 
 // Constants
-.const FLOPPY_DATA_OUT = $02
-.const FLOPPY_CLOCK_OUT = $08
+.label DATA_OUT = $02
+.label CLOCK_OUT = $08
 
 // Memory Locations
-.const C1541_BUFFER0_CMD_CODE = $00
+.label buffer0CmdCode = $00
 
-.const C1541_BUFFER1_TRACK_SEC_HI = $06
-.const C1541_BUFFER1_TRACK_SEC_LO = $07
+.label buffer1TrackSecHi = $06
+.label buffer1TrackSecLo = $07
 
-.const C1541_BUFFER1 = $0300
-.const C1541_BUFFER2 = $0400
-.const C1541_BUFFER3 = $0500
-.const C1541_BUFFER4 = $0700
+.label buffer1 = $0300
+.label buffer2 = $0400
+.label buffer3 = $0500
+.label buffer4 = $0700
 
-.const C1541_PORTB = $1800
+.label portB = $1800
 
 // Function calls
-.const C1541_READ_BLOCK = $d586
-.const C1541_CLOCK_OUT_HI = $e9ae
+.label readBlock = $d586
+.label clockOutHi = $e9ae
