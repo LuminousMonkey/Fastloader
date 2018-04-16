@@ -1,6 +1,6 @@
 #import "c64-memory-locations.asm"
 
-.const TARGET = $0400
+.const TARGET = $0400             // Load address of code.
 .const TRACK = 18
 .const DATA_OUT = %00100000       // Bit 5
 .const CLOCK_OUT = %00010000      // Bit 4
@@ -12,7 +12,7 @@
 .const SEC_ADDR_FILE = $b9
 .const LOG_NUM_FILE = $b8
 
-* = $0188 "Load Address"
+* = $0188 "Main"
 main:
   lda #$0f
   sta SEC_ADDR_FILE             // Secondary address of current file.
@@ -23,7 +23,7 @@ main:
   jsr $fdf9                     // Filename
   jsr $f34a                     // Open
   sei
-  lda #VIC_OUT | DATA_OUT // CLK=0 DATA=1
+  lda #VIC_OUT | DATA_OUT       // CLK=0 DATA=1
   sta PORTA_SERIAL              // We're not ready to receive.
 
 // Wait until floppy is active.
