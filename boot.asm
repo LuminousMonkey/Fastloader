@@ -2,11 +2,13 @@
 
 .const TARGET = $0400             // Load address of code.
 .const TRACK = 18
+
 .const DATA_OUT = %00100000       // Bit 5
 .const CLOCK_OUT = %00010000      // Bit 4
 .const VIC_OUT = %00000011        // Bits need to be on to keep VIC happy.
 
-.var seccnt = 2
+// Zero page memory for remaining sector counter.
+.label remaining_sectors = $02
 
 // C64 Memory Locations
 .const SEC_ADDR_FILE = $b9
@@ -32,7 +34,7 @@ wait_fast:
   bvs wait_fast                        // Wait for CLK=1 (inverted read!)
 
   lda #sector_table_end - sector_table // Number of sectors
-  sta seccnt
+  sta remaining_sectors
   ldy #0
 
 get_rest_loop:
@@ -45,7 +47,7 @@ wait_raster:
   cmp #50                       // Between 0-49 or 256-305?
   bcc wait_raster_end           // Yes, so it's safe.
   and #$07                      // Lowest 3 bits
-  cmp #$0203                    // Are we in the line before a badline?
+  cmp #$02                      // Are we in the line before a badline?
   beq wait_raster               // Yes, then wait until we are not.
 
 wait_raster_end:
@@ -71,7 +73,7 @@ selfmod1:
   bne get_rest_loop
 
   inc selfmod1+2
-  dec seccnt
+  dec remaining_sectors
   bne get_rest_loop
 
 infinite_loop:
@@ -94,12 +96,15 @@ c64_code_end:
 
 // Must maintain list address to match load area of 1541 buffer.
 * = $0206 "1541 Code"
-.const sector_index = $05
+
+// Location to store current sector index.
+.label sector_index = $05
 
 #import "1541-memory-locations.asm"
 // After reading the sector, the contents can be found at $0400 in the buffer.
 // This means, the 1541 code can be executed from this buffer.
 .pseudopc c64_code_end - main + 4 + c1541.buffer2 {
+.print "C1541 Code at: " + toHexString(*)
 start1541:
   lda #c1541.CLOCK_OUT
   sta c1541.portB               // Fast code is running!
@@ -112,7 +117,7 @@ start1541:
   sta c1541.buffer1TrackSecHi
 
 read_loop:
-  lda sector_index
+  ldx sector_index
   lda sector_table,x
   inc sector_index
   bmi end
@@ -125,7 +130,7 @@ send_loop:
   // We can use $f9 as the byte counter, since we'll return it to 0
   // so it holds the correct buffer number "0" when we read the next
   // sector.
-  lda $f9
+  ldx $f9
   lda c1541.buffer1,x
 
   // First encode
@@ -137,7 +142,7 @@ send_loop:
   lsr                           // Get high nybble.
   tax                           // to X
   ldy encode_table,x            // Super-encoded high nybble in Y
-  lda #0
+  ldx #0
   stx c1541.portB                // DATA=0, CLOCK=0 -> we're ready to send!
   pla
   and #$0f                      // Lower nybble
@@ -173,6 +178,7 @@ encode_table:
   .byte %1111, %0111, %1101, %0101, %1011, %0011, %1001, %0001
   .byte %1110, %0110, %1100, %0100, %1010, %0010, %1000, %0000
 
+// Array of sectors to load, terminated with $ff.
 sector_table:
   .byte 0,1,2,3,$ff
 sector_table_end:
