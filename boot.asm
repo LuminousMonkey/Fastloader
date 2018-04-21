@@ -1,4 +1,6 @@
-#import "c64-memory-locations.asm"
+#import "kernal.asm"
+#import "vicii.asm"
+#import "cia.asm"
 
 .const TARGET = $0400             // Load address of code.
 .const TRACK = 18
@@ -22,15 +24,15 @@ main:
   ldx #<memory_execute
   ldy #>memory_execute
   lda #memory_execute_end - memory_execute
-  jsr $fdf9                     // Filename
-  jsr $f34a                     // Open
+  jsr kernal.setFilename        // Filename
+  jsr kernal.openFile           // Open
   sei
   lda #VIC_OUT | DATA_OUT       // CLK=0 DATA=1
-  sta PORTA_SERIAL              // We're not ready to receive.
+  sta cia.PORTA_SERIAL          // We're not ready to receive.
 
 // Wait until floppy is active.
 wait_fast:
-  bit PORTA_SERIAL
+  bit cia.PORTA_SERIAL
   bvs wait_fast                        // Wait for CLK=1 (inverted read!)
 
   lda #sector_table_end - sector_table // Number of sectors
@@ -38,12 +40,12 @@ wait_fast:
   ldy #0
 
 get_rest_loop:
-  bit PORTA_SERIAL
+  bit cia.PORTA_SERIAL
   bvc get_rest_loop             // Wait for CLK=0 (Inverted read!)
 
 // Wait for raster
 wait_raster:
-  lda CURRENT_RASTER_LINE       // Vertical raster position (bits 0-7)
+  lda vicii.CURRENT_RASTER_LINE // Vertical raster position (bits 0-7)
   cmp #50                       // Between 0-49 or 256-305?
   bcc wait_raster_end           // Yes, so it's safe.
   and #$07                      // Lowest 3 bits
@@ -52,20 +54,20 @@ wait_raster:
 
 wait_raster_end:
   lda #VIC_OUT                  // CLK=0 DATA=0
-  sta PORTA_SERIAL              // We're ready, start sending!
+  sta cia.PORTA_SERIAL          // We're ready, start sending!
   pha                           // 3 cycles
   pla                           // 3 cycles
   bit $00                       // 3 cycles
-  lda PORTA_SERIAL              // Get 2 bits into bits 6&7
+  lda cia.PORTA_SERIAL          // Get 2 bits into bits 6&7
   // Shift and load the other bits into the accumulator.
   .for(var index = 0; index < 3; index++) {
     lsr
     lsr
-    eor PORTA_SERIAL
+    eor cia.PORTA_SERIAL
   }
 
   ldx #VIC_OUT | DATA_OUT       // CLK=0 DATA=1
-  stx PORTA_SERIAL              // Not ready any more, don't start sending.
+  stx cia.PORTA_SERIAL          // Not ready any more, don't start sending.
 
 selfmod1:
   sta TARGET,y
