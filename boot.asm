@@ -155,7 +155,8 @@ wait_for_c64:
   ldx c1541.portB
   bne wait_for_c64              // Needs all 0
 
-  // Then send.
+  // Need to encode the bits out to the C64, using bits 1 and 3 of the
+  // IEC port.
   sta c1541.portB
   asl
   and #$0f
