@@ -1,6 +1,7 @@
 #import "kernal.asm"
 #import "vicii.asm"
 #import "cia.asm"
+#import "util.asm"
 
 .label TARGET = $0400             // Load address of code.
 .const TRACK = 18
@@ -116,14 +117,14 @@ start1541:
   sta $f9                       // Buffer $0300 for the read.
   lda #TRACK                    // The track we're going to start
                                 // loading from.
-  sta c1541.buffer1TrackSecHi
+  sta c1541.buffer1TrackSecHi   // Track parameter of drive rom call.
 
 read_loop:
   ldx sector_index
   lda sector_table,x
   inc sector_index
-  bmi end
-  sta c1541.buffer1TrackSecLo
+  bmi end                       // Have we hit the -1 at the end?
+  sta c1541.buffer1TrackSecLo   // Next sector to load.
   cli
   jsr c1541.readBlock           // Read sector.
   sei
@@ -132,20 +133,19 @@ send_loop:
   // We can use $f9 as the byte counter, since we'll return it to 0
   // so it holds the correct buffer number "0" when we read the next
   // sector.
-  ldx $f9
+  .label byte_read_count = $f9
+
+  ldx byte_read_count
   lda c1541.buffer1,x
 
   // First encode
   eor #3                        // Fix up for receiver side (VIC bank!)
   pha                           // Save original
-  lsr
-  lsr
-  lsr
-  lsr                           // Get high nybble.
+  :lsr #4                       // Get high nybble.
   tax                           // to X
   ldy encode_table,x            // Super-encoded high nybble in Y
   ldx #0
-  stx c1541.portB                // DATA=0, CLOCK=0 -> we're ready to send!
+  stx c1541.portB               // DATA=0, CLOCK=0 -> we're ready to send!
   pla
   and #$0f                      // Lower nybble
   tax
@@ -157,20 +157,14 @@ wait_for_c64:
 
   // Need to encode the bits out to the C64, using bits 1 and 3 of the
   // IEC port.
-  sta c1541.portB
-  asl
-  and #$0f
-  sta c1541.portB
+  EncodeHalfNibble()
   tya
   nop
-  sta c1541.portB
-  asl
-  and #$0f
-  sta c1541.portB
+  EncodeHalfNibble()
 
   jsr c1541.clockOutHi          // Clock=1 10 cycles later.
 
-  inc $f9
+  inc $byte_read_count
   bne send_loop
   beq read_loop
 
@@ -181,8 +175,16 @@ encode_table:
   .byte %1111, %0111, %1101, %0101, %1011, %0011, %1001, %0001
   .byte %1110, %0110, %1100, %0100, %1010, %0010, %1000, %0000
 
-// Array of sectors to load, terminated with $ff.
+// Array of sectors to load, terminated with -1.
 sector_table:
-  .byte 0,1,2,3,$ff
+  .byte 0,1,2,3,-1
 sector_table_end:
+}
+
+// This macro encodes onto the IEC port of the 1541.
+.macro EncodeHalfNibble() {
+  sta c1541.portB
+  asl
+  and #$0f
+  sta c1541.portB
 }
