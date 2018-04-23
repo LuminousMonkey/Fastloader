@@ -4,7 +4,7 @@
 
 .label CURRENT_RASTER_LINE = $d012
 
-.macro SetBorderColor(color) {
+.macro @SetBorderColor(color) {
   lda #color
   sta $d020
 }

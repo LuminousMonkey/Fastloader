@@ -94,11 +94,12 @@ memory_execute:
 memory_execute_end:
 
 * = $0203 "Autoexecute"
+  SetBorderColor(0)
   jmp main
 c64_code_end:
 
 // Must maintain list address to match load area of 1541 buffer.
-* = $0206 "1541 Code"
+* = * "1541 Code"
 
 // Location to store current sector index.
 .label sector_index = $05
@@ -107,7 +108,7 @@ c64_code_end:
 // After reading the sector, the contents can be found at $0400 in the buffer.
 // This means, the 1541 code can be executed from this buffer.
 .pseudopc c64_code_end - main + 4 + c1541.buffer2 {
-.print "C1541 Code at: " + toHexString(*)
+.print "C1541 Code at: $" + toHexString(*)
 start1541:
   lda #c1541.CLOCK_OUT
   sta c1541.portB               // Fast code is running!
@@ -160,11 +161,10 @@ wait_for_c64:
   EncodeHalfNibble()
   tya
   nop
-  EncodeHalfNibble()
-
+  EncodeHalfNibble()            // Byte has now been sent.
   jsr c1541.clockOutHi          // Clock=1 10 cycles later.
 
-  inc $byte_read_count
+  inc byte_read_count
   bne send_loop
   beq read_loop
 
