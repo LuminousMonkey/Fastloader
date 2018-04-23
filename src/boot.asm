@@ -177,7 +177,7 @@ encode_table:
 
 // Array of sectors to load, terminated with -1.
 sector_table:
-  .byte 0,1,2,3,-1
+  .byte 0,-1
 sector_table_end:
 }
 
