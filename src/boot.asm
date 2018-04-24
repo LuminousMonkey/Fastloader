@@ -1,14 +1,10 @@
-#import "kernal.inc"
-#import "vicii.inc"
-#import "cia.inc"
+#import "shared/kernal.inc"
+#import "shared/vic_ii.inc"
+#import "shared/cia.inc"
 #import "util.inc"
 
 .label TARGET = $0400             // Load address of code.
 .const TRACK = 18
-
-.const DATA_OUT = %00100000       // Bit 5
-.const CLOCK_OUT = %00010000      // Bit 4
-.const VIC_OUT = %00000011        // Bits need to be on to keep VIC happy.
 
 // Zero page memory for remaining sector counter.
 .label remaining_sectors = $02
@@ -28,12 +24,12 @@ main:
   jsr kernal.setFilename        // Filename
   jsr kernal.openFile           // Open
   sei
-  lda #VIC_OUT | DATA_OUT       // CLK=0 DATA=1
-  sta cia.PORTA_SERIAL          // We're not ready to receive.
+  lda #(cia.cia2.VIC2_BANK | cia.cia2.SERIAL_DATA_OUT) // CLK=0 DATA=1
+  sta cia.cia2.PORTA            // We're not ready to receive.
 
 // Wait until floppy is active.
 wait_fast:
-  bit cia.PORTA_SERIAL
+  bit cia.cia2.PORTA
   bvs wait_fast                            // Wait for CLK=1 (inverted read!)
 
   .print "There are " + (sector_table_end - sector_table - 1) + " sectors to load."
@@ -42,12 +38,12 @@ wait_fast:
   ldy #0
 
 get_rest_loop:
-  bit cia.PORTA_SERIAL
+  bit cia.cia2.PORTA
   bvc get_rest_loop             // Wait for CLK=0 (Inverted read!)
 
 // Wait for raster
 wait_raster:
-  lda vicii.CURRENT_RASTER_LINE // Vertical raster position (bits 0-7)
+  lda vic_ii.RASTERLINE         // Vertical raster position (bits 0-7)
   cmp #50                       // Between 0-49 or 256-305?
   bcc wait_raster_end           // Yes, so it's safe.
   and #$07                      // Lowest 3 bits
@@ -55,21 +51,21 @@ wait_raster:
   beq wait_raster               // Yes, then wait until we are not.
 
 wait_raster_end:
-  lda #VIC_OUT                  // CLK=0 DATA=0
-  sta cia.PORTA_SERIAL          // We're ready, start sending!
+  lda #cia.cia2.VIC2_BANK       // CLK=0 DATA=0
+  sta cia.cia2.PORTA            // We're ready, start sending!
   pha                           // 3 cycles
   pla                           // 3 cycles
   bit $00                       // 3 cycles
-  lda cia.PORTA_SERIAL          // Get 2 bits into bits 6&7
+  lda cia.cia2.PORTA            // Get 2 bits into bits 6&7
   // Shift and load the other bits into the accumulator.
   .for(var index = 0; index < 3; index++) {
     lsr
     lsr
-    eor cia.PORTA_SERIAL
+    eor cia.cia2.PORTA
   }
 
-  ldx #VIC_OUT | DATA_OUT       // CLK=0 DATA=1
-  stx cia.PORTA_SERIAL          // Not ready any more, don't start sending.
+  ldx #(cia.cia2.VIC2_BANK | cia.cia2.SERIAL_DATA_OUT)       // CLK=0 DATA=1
+  stx cia.cia2.PORTA            // Not ready any more, don't start sending.
 
 selfmod1:
   sta TARGET,y
@@ -96,9 +92,9 @@ memory_execute:
 memory_execute_end:
 
 * = $0203 "Autoexecute"
-  lda #0
-  sta $d020
-  sta $d021
+  lda #BLACK
+  sta vic_ii.BORDERCOLOUR
+  sta vic_ii.BGCOLOUR
   jmp main
 c64_code_end:
 
