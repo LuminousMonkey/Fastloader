@@ -34,9 +34,10 @@ main:
 // Wait until floppy is active.
 wait_fast:
   bit cia.PORTA_SERIAL
-  bvs wait_fast                        // Wait for CLK=1 (inverted read!)
+  bvs wait_fast                            // Wait for CLK=1 (inverted read!)
 
-  lda #sector_table_end - sector_table // Number of sectors
+  .print "There are " + (sector_table_end - sector_table - 1) + " sectors to load."
+  lda #sector_table_end - sector_table - 1 // Number of sectors
   sta remaining_sectors
   ldy #0
 
@@ -72,10 +73,11 @@ wait_raster_end:
 
 selfmod1:
   sta TARGET,y
-  iny
+  iny                           // Move to the next byte along.
   bne get_rest_loop
 
-  inc selfmod1+2
+  inc selfmod1+2                // Modify the TARGET address, so it
+                                // starts at the next lot of 256 bytes.
   dec remaining_sectors
   bne get_rest_loop
 
@@ -94,7 +96,9 @@ memory_execute:
 memory_execute_end:
 
 * = $0203 "Autoexecute"
-  SetBorderColor(0)
+  lda #0
+  sta $d020
+  sta $d021
   jmp main
 c64_code_end:
 
@@ -123,8 +127,8 @@ start1541:
 read_loop:
   ldx sector_index
   lda sector_table,x
-  inc sector_index
   bmi end                       // Have we hit the -1 at the end?
+  inc sector_index
   sta c1541.buffer1TrackSecLo   // Next sector to load.
   cli
   jsr c1541.readBlock           // Read sector.
@@ -169,7 +173,7 @@ wait_for_c64:
   beq read_loop
 
 end:
-  jmp *
+  rts
 
 encode_table:
   .byte %1111, %0111, %1101, %0101, %1011, %0011, %1001, %0001
