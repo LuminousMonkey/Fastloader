@@ -1,7 +1,7 @@
-#import "kernal.asm"
-#import "vicii.asm"
-#import "cia.asm"
-#import "util.asm"
+#import "kernal.inc"
+#import "vicii.inc"
+#import "cia.inc"
+#import "util.inc"
 
 .label TARGET = $0400             // Load address of code.
 .const TRACK = 18
@@ -104,7 +104,7 @@ c64_code_end:
 // Location to store current sector index.
 .label sector_index = $05
 
-#import "c1541.asm"
+#import "c1541.inc"
 // After reading the sector, the contents can be found at $0400 in the buffer.
 // This means, the 1541 code can be executed from this buffer.
 .pseudopc c64_code_end - main + 4 + c1541.buffer2 {
