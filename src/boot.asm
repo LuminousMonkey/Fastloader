@@ -4,7 +4,7 @@
 #import "util.inc"
 
 .label TARGET = $0400             // Load address of code.
-.const TRACK = 18
+.const TRACK = 20
 
 // Zero page memory for remaining sector counter.
 .label remaining_sectors = $02
@@ -78,7 +78,7 @@ selfmod1:
   bne get_rest_loop
 
 infinite_loop:
-  jmp infinite_loop
+  jmp $1108
 
 // This is where we overwrite the stack when loading to get our code
 // to auto execute. Forces $0203 to be the next instruction.
@@ -177,7 +177,8 @@ encode_table:
 
 // Array of sectors to load, terminated with -1.
 sector_table:
-  .byte 0,-1
+  .fill 14, i
+  .byte -1
 sector_table_end:
 }
 
