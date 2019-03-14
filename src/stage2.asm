@@ -7,7 +7,7 @@
 * = $0865 "Loader Install"
 .import c64 "../resources/install-c64.prg"
 
-* = $1200 "Main"
+* = * "Main"
 main:
   lda variable
   sta $d019
