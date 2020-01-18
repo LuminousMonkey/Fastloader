@@ -1,8 +1,9 @@
+// -*- mode: kickasm -*-
 #import "kernal.asm"
 #import "vicii.asm"
 #import "cia.asm"
 
-.const TARGET = $0400             // Load address of code.
+.const TARGET = $0400                   // Load address of code.
 .const TRACK = 18
 
 .const DATA_OUT = %00100000       // Bit 5
@@ -19,8 +20,8 @@
 * = $0188 "Main"
 main:
   lda #$0f
-  sta SEC_ADDR_FILE             // Secondary address of current file.
-  sta LOG_NUM_FILE              // Logical number of current file.
+  sta SEC_ADDR_FILE                     // Secondary address of current file.
+  sta LOG_NUM_FILE                      // Logical number of current file.
   ldx #<memory_execute
   ldy #>memory_execute
   lda #memory_execute_end - memory_execute
